@@ -40,6 +40,8 @@ module Match
 
       profile_name = ["match", profile_type_name(prov_type), params[:app_identifier]].join(" ")
 
+      UI.message('Prov type '+prov_type.to_s)
+
       values = {
         app_identifier: params[:app_identifier],
         output_path: File.join(params[:workspace], "profiles", prov_type.to_s),
@@ -50,6 +52,7 @@ module Match
         ignore_profiles_with_different_name: true,
         team_id: params[:team_id]
       }
+      
 
       values[:adhoc] = true if prov_type == :adhoc
       values[:development] = true if prov_type == :development
