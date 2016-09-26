@@ -1,12 +1,10 @@
 # Actions
 
-There are lots of predefined `fastlane` actions you can use. If you have ideas for more, please [let me know](https://github.com/fastlane/fastlane/issues/new).
-
-To get the most up-to-date information from the command line on your current version you can also run:
+To get the most up-to-date information from the command line on your current version you can run:
 
 ```sh
-fastlane actions: List all available fastlane actions
-fastlane action [action_name]:
+fastlane actions # List all available fastlane actions
+fastlane action [action_name] # Details for a specific fastlane action
 ```
 
 You can import another `Fastfile` by using the `import` action. This is useful if you have shared lanes across multiple apps and you want to store a `Fastfile` in a separate folder. The path must be relative to the `Fastfile` this is called from.
@@ -43,6 +41,21 @@ If you use [CocoaPods](http://cocoapods.org) you can use the `cocoapods` integra
 cocoapods # this will run pod install
 ```
 
+More options are available:
+
+```ruby
+cocoapods(
+  clean: true,                                    # Remove SCM directories
+  integrate: true,                                # Integrate the Pods libraries into the Xcode project(s)
+  repo_update: false,                             # Run `pod repo update` before install
+  silent: false,                                  # Execute command without logging output
+  verbose: false,                                 # Show more debugging information
+  ansi: true,                                     # Show output with ANSI codes
+  use_bundle_exec: true,                          # Use bundle exec when there is a Gemfile presented
+  podfile: 'path/to/Podfile'                      # Explicitly specify the path to the Cocoapods' Podfile. You can either set it to the Podfile's path or to the folder containing the Podfile file
+)
+```
+
 ### [Carthage](https://github.com/Carthage/Carthage)
 
 This will execute `carthage bootstrap`
@@ -55,7 +68,7 @@ More options are available:
 
 ```ruby
 carthage(
-  command: "bootstrap"                            # One of: build, bootstrap, update, archive. (default: bootstrap)
+  command: "bootstrap",                            # One of: build, bootstrap, update, archive. (default: bootstrap)
   dependencies: ['Alamofire', 'Notice'],          # Specify which dependencies to update (only for the update command)
   use_ssh: false,                                 # Use SSH for downloading GitHub repositories.
   use_submodules: false,                          # Add dependencies as Git submodules.
@@ -210,7 +223,7 @@ clear_derived_data
 
 Build your app right inside `fastlane` and the path to the resulting ipa is automatically available to all other actions.
 
-You should check out the [code signing guide](https://github.com/fastlane/fastlane/tree/master/fastlane/docs/Codesigning).
+You should check out the [code signing guide](https://docs.fastlane.tools/codesigning/GettingStarted/).
 
 ```ruby
 ipa(
@@ -242,7 +255,7 @@ See how [Product Hunt](https://github.com/fastlane/examples/blob/master/ProductH
 
 ### update_project_provisioning
 
-You should check out the [code signing guide](https://github.com/fastlane/fastlane/tree/master/fastlane/docs/Codesigning) before using this action.
+You should check out the [code signing guide](https://docs.fastlane.tools/codesigning/GettingStarted/) before using this action.
 
 Updates your Xcode project to use a specific provisioning profile for code signing, so that you can properly build and sign the .ipa file using the [ipa](#ipa) action or a CI service.
 
@@ -416,15 +429,18 @@ delete_keychain(name: "KeychainName")
 Import certificates into the current default keychain. Use `create_keychain` to create a new keychain.
 
 ```ruby
-import_certificate certificate_path: "certs/AppleWWDRCA.cer"
-import_certificate certificate_path: "certs/dist.p12", certificate_password: ENV['CERT_PASSWORD']
+import_certificate(certificate_path: "certs/AppleWWDRCA.cer")
+import_certificate(
+  certificate_path: "certs/dist.p12", 
+  certificate_password: ENV['CERT_PASSWORD'] || "default"
+)
 ```
 
 ### [xcodebuild](https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man1/xcodebuild.1.html)
 
 **Note**: `xcodebuild` is a complex command, so it is recommended to use [gym](https://github.com/fastlane/fastlane/tree/master/gym) for building your ipa file and [scan](https://github.com/fastlane/fastlane/tree/master/scan) for testing your app instead.
 
-Make sure to also read the [code signing guide](https://github.com/fastlane/fastlane/tree/master/fastlane/docs/Codesigning).
+Make sure to also read the [code signing guide](https://docs.fastlane.tools/codesigning/GettingStarted/).
 
 ```ruby
 # Create an archive. (./build-dir/MyApp.xcarchive)
@@ -833,8 +849,7 @@ Other options
 ```ruby
 deliver(
   force: true, # Set to true to skip PDF verification
-  email: "itunes@connect.com" # different Apple ID than the dev portal
-  itc_provider: 'abcde12345' # pass a specific value to the iTMSTransporter -itc_provider option
+  itc_provider: "abcde12345" # pass a specific value to the iTMSTransporter -itc_provider option
 )
 ```
 
@@ -855,7 +870,7 @@ This will use [deliver](https://github.com/fastlane/fastlane/tree/master/deliver
 Additionally you can skip the submission of the new binary to the testers to only upload the build:
 
 ```ruby
-testflight(skip_deploy: true)
+testflight(skip_submission: true)
 ```
 
 ### `latest_testflight_build_number`
@@ -883,7 +898,7 @@ this requires `ios-deploy` to be installed please have a look at [ios-deploy](ht
 
 ```ruby
 install_on_device(
-  device_id: "a3be6c9ff7e5c3c6028597513243b0f933b876d4"
+  device_id: "a3be6c9ff7e5c3c6028597513243b0f933b876d4",
   ipa: "./app.ipa"
 )
 ```
@@ -919,11 +934,11 @@ Additionally you can specify `notes`, `emails`, `groups` and `notifications`.
 
 When using the `groups` parameter, it's important to use the group **alias** names for each group you'd like to distribute to. A group's alias can be found in the web UI. If you're viewing the Beta page, you can open the groups dialog here:
 
-![Crashlytics Beta Groups Navigation](../assets/Beta-Groups-Nav.png)
+![Crashlytics Beta Groups Navigation](/img/actions/Beta-Groups-Nav.png)
 
 Each group's alias is then listed here:
 
-![Crashlytics Beta Groups Navigation](../assets/Beta-Group-Alias.png)
+![Crashlytics Beta Groups Navigation](../img/actions/Beta-Group-Alias.png)
 
 There are a couple reasons why aliases exist:
 
@@ -1149,7 +1164,7 @@ If you provide a `public_key`, this will overwrite an existing application. If y
 
 #### `device_grid` for your Pull Requests
 
-![../lib/fastlane/actions/device_grid/assets/GridExampleScreenshot.png](../lib/fastlane/actions/device_grid/assets/GridExampleScreenshot.png)
+![/img/actions/GridExampleScreenshot.png](/img/actions/GridExampleScreenshot.png)
 
 Follow [this guide](https://github.com/fastlane/fastlane/blob/master/fastlane/lib/fastlane/actions/device_grid/README.md) to get a grid of devices every time you submit a pull request. The app will be uploaded to [appetize.io](https://appetize.io/) so you can stream and try them right in your browser.
 
@@ -1913,9 +1928,9 @@ mailgun(
   success: true,
   message: "This is the mail's content"
 )
+```
 
-or
-
+```ruby
 mailgun(
   postmaster: "MY_POSTMASTER",
   apikey: "MY_API_KEY",
@@ -1983,15 +1998,6 @@ Display a notification using the macOS notification center. Uses [terminal-notif
 
 [ByMyEyes](https://github.com/fastlane/examples/blob/master/BeMyEyes/Fastfile) uses the `notify` action to show a success message after `fastlane` finished executing.
 
-### [Testmunk](http://testmunk.com)
-Run your functional tests on real iOS devices over the cloud (for free on an iPod). With this simple [testcase](https://github.com/testmunk/TMSample/blob/master/testcases/smoke/smoke_features.zip) you can ensure your app launches and there is no crash at launch. Tests can be extended with [Testmunk's library](http://docs.testmunk.com/en/latest/steps.html) or custom steps. More details about this action can be found in [`testmunk.rb`](https://github.com/fastlane/fastlane/blob/master/lib/fastlane/actions/testmunk.rb).
-
-```ruby
-ENV['TESTMUNK_EMAIL'] = 'email@email.com'
-# Additionally, you have to set TESTMUNK_API, TESTMUNK_APP and TESTMUNK_IPA
-testmunk
-```
-
 ### [Podio](http://podio.com)
 Creates an item within your Podio app. In case an item with the given identifying value already exists within your Podio app, it updates that item. To find out how to get your authentication credentials see [Podio API documentation](https://developers.podio.com). To find out how to get your identifying field (external ID) and general info about Podio item see [tutorials](https://developers.podio.com/examples/items).
 
@@ -2019,8 +2025,8 @@ onesignal(
   auth_token: "Your OneSignal Auth Token",
   app_name: "Name for OneSignal App",
   android_token: "Your Android GCM key (optional)",
-  apns_p12: "Path to Apple .p12 file (optional)"
-  apns_p12_password: "Password for .p12 file (optional)"
+  apns_p12: "Path to Apple .p12 file (optional)",
+  apns_p12_password: "Password for .p12 file (optional)",
   apns_env: "production/sandbox (defaults to production)"
 )
 ```
@@ -2031,7 +2037,7 @@ Send a text message to a Flock group.
 
 ```ruby
 flock(
-  message: "Hello"
+  message: "Hello",
   token: "xxx"
 )
 ```

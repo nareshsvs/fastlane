@@ -4,12 +4,17 @@ module Fastlane
   # tool or fastlane itself
   class CLIToolsDistributor
     class << self
+      def running_version_command?
+        ARGV.include?('-v') || ARGV.include?('--version')
+      end
+
       def take_off
         before_import_time = Time.now
 
         require "fastlane" # this might take a long time if there is no Gemfile :(
 
-        if Time.now - before_import_time > 3
+        # We want to avoid printing output other than the version number if we are running `fastlane -v`
+        if Time.now - before_import_time > 3 && !running_version_command?
           print_slow_fastlane_warning
         end
 
@@ -55,7 +60,8 @@ module Fastlane
       end
 
       def print_slow_fastlane_warning
-        return if ENV['BUNDLE_BIN_PATH'] # `BUNDLE_BIN_PATH` is used when the user uses `bundle exec`
+        # `BUNDLE_BIN_PATH` is used when the user uses `bundle exec`
+        return if ENV['BUNDLE_BIN_PATH'] || ENV['SKIP_SLOW_FASTLANE_WARNING']
 
         gemfile_path = PluginManager.new.gemfile_path
         if gemfile_path

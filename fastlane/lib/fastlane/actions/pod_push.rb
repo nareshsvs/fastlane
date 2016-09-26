@@ -50,7 +50,7 @@ module Fastlane
                                        optional: true,
                                        verify_block: proc do |value|
                                          UI.user_error!("Couldn't find file at path '#{value}'") unless File.exist?(value)
-                                         UI.user_error!("File must be a `.podspec`") unless value.end_with?(".podspec")
+                                         UI.user_error!("File must be a `.podspec` or `.podspec.json`") unless value.end_with?(".podspec", ".podspec.json")
                                        end),
           FastlaneCore::ConfigItem.new(key: :repo,
                                        description: "The repo you want to push. Pushes to Trunk by default",
@@ -85,7 +85,7 @@ module Fastlane
       end
 
       def self.is_supported?(platform)
-        true
+        [:ios, :mac].include? platform
       end
     end
   end

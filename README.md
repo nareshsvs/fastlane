@@ -10,6 +10,8 @@ fastlane
 [![Gem](https://img.shields.io/gem/v/fastlane.svg?style=flat)](http://rubygems.org/gems/fastlane)
 [![Build Status](https://img.shields.io/circleci/project/fastlane/fastlane/master.svg?style=flat)](https://circleci.com/gh/fastlane/fastlane)
 
+#### ✨ Check out [docs.fastlane.tools](https://docs.fastlane.tools) on how to get started with fastlane ✨
+
 `fastlane` is a tool for iOS, Mac, and Android developers to automate tedious tasks like generating screenshots, dealing with provisioning profiles, and releasing your application.
 
 Use a lane to define your process:
@@ -47,6 +49,8 @@ Then to deploy a new 'beta' version of your app just run
 :computer: | Support for iOS, Mac, and Android apps
 :octocat: | Full Git and Mercurial support
 
+Check out the new [docs.fastlane.tools](https://docs.fastlane.tools).
+
 ##### Like this tool? [Be the first to know about updates and new fastlane tools](https://tinyletter.com/krausefx).
 
 ## Installation
@@ -67,14 +71,10 @@ If you'd like to take a look at a project already using `fastlane` check out [fa
 
 ## Quick Start
 
-`fastlane`'s setup assistant creates all the necessary files to get you started, using existing app metadata from iTunes Connect or Google Play.
+Get started with fastlane within just minutes using the quick start guide:
 
-- `cd [your_project_folder]`
-- `fastlane init`
-- Follow the setup assistant to configure your app
-- Further customise the Ruby based `Fastfile` with additional [actions](https://github.com/fastlane/fastlane/blob/master/fastlane/docs/Actions.md)
-
-For more details, check out the [fastlane guide](https://github.com/fastlane/fastlane/blob/master/fastlane/docs/Guide.md).
+- [Getting started on fastlane for iOS](https://docs.fastlane.tools/getting-started/ios/setup/)
+- [Getting started on fastlane for Android](https://docs.fastlane.tools/getting-started/android/setup/)
 
 ## Available Commands
 
@@ -118,12 +118,16 @@ Please [submit an issue](https://github.com/fastlane/fastlane/issues) on GitHub 
 
 Thanks to all [contributors](https://github.com/fastlane/fastlane/graphs/contributors) for extending and improving `fastlane`.
 
+## Speakers
+
+Are you giving a talk on fastlane? Great! [Let us know](https://fastlane.tools/speaking) so we can help you give the best possible presentation. 
+
 ## Code of Conduct
 
 Help us keep `fastlane` open and inclusive. Please read and follow our [Code of Conduct](https://github.com/fastlane/fastlane/blob/master/CODE_OF_CONDUCT.md).
 
 ## License
 
-This project is licensed under the terms of the MIT license. See the LICENSE file.
+This project is licensed under the terms of the MIT license. See the [LICENSE](LICENSE) file.
 
 > This project and all fastlane tools are in no way affiliated with Apple Inc or Google. This project is open source under the MIT license, which means you have full access to the source code and can modify it to fit your own needs. All fastlane tools run on your own computer or server, so your credentials or other sensitive information will never leave your own computer. You are responsible for how you use fastlane tools.

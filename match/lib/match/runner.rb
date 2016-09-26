@@ -16,11 +16,11 @@ module Match
       spaceship.bundle_identifier_exists(params) if spaceship
 
       # Certificate
-      cert_id = certificate(params: params)
+      cert_id = fetch_certificate(params: params)
       spaceship.certificate_exists(params, cert_id) if spaceship
 
-      uuid = profile(params: params,
-                     certificate_id: cert_id)
+      uuid = fetch_provisioning_profile(params: params,
+                                certificate_id: cert_id)
       spaceship.profile_exists(params, uuid) if spaceship
 
       # Done
@@ -29,14 +29,20 @@ module Match
         GitHelper.commit_changes(params[:workspace], message, params[:git_url], params[:git_branch])
       end
 
-      TablePrinter.print_summary(params, uuid)
+      TablePrinter.print_summary(params)
 
       UI.success "All required keys, certificates and provisioning profiles are installed 🙌".green
+    rescue Spaceship::Client::UnexpectedResponse, Spaceship::Client::InvalidUserCredentialsError, Spaceship::Client::NoUserCredentialsError => ex
+      UI.error("An error occured while verifying your certificates and profiles with the Apple Developer Portal.")
+      UI.error("If you already have your certificates stored in git, you can run `match` in readonly mode")
+      UI.error("to just install the certificates and profiles without accessing the Dev Portal.")
+      UI.error("To do so, just pass `readonly: true` to your match call.")
+      raise ex
     ensure
       GitHelper.clear_changes
     end
 
-    def certificate(params: nil)
+    def fetch_certificate(params: nil)
       cert_type = :distribution
       cert_type = :development if params[:type] == "development"
       cert_type = :enterprise if Match.enterprise? && params[:type] == "enterprise"
@@ -69,10 +75,12 @@ module Match
       return File.basename(cert_path).gsub(".cer", "") # Certificate ID
     end
 
-    def profile(params: nil, certificate_id: nil)
+    # @return [String] The UUID of the provisioning profile so we can verify it with the Apple Developer Portal
+    def fetch_provisioning_profile(params: nil, certificate_id: nil)
+      app_identifier = params[:app_identifier]
       prov_type = params[:type].to_sym
 
-      profile_name = [Match::Generator.profile_type_name(prov_type), params[:app_identifier]].join("_").gsub("*", '\*') # this is important, as it shouldn't be a wildcard
+      profile_name = [Match::Generator.profile_type_name(prov_type), app_identifier].join("_").gsub("*", '\*') # this is important, as it shouldn't be a wildcard
       profiles = Dir[File.join(params[:workspace], "profiles", prov_type.to_s, "#{profile_name}.mobileprovision")]
 
       # Install the provisioning profiles
@@ -108,7 +116,19 @@ module Match
       end
       
       FastlaneCore::ProvisioningProfile.install(profile)
-      Utils.fill_environment(params, uuid)
+
+      Utils.fill_environment(Utils.environment_variable_name(app_identifier: app_identifier,
+                                                                       type: prov_type),
+                             uuid)
+
+      # TeamIdentifier is returned as an array, but we're not sure why there could be more than one
+      Utils.fill_environment(Utils.environment_variable_name_team_id(app_identifier: app_identifier,
+                                                                               type: prov_type),
+                             parsed["TeamIdentifier"].first)
+
+      Utils.fill_environment(Utils.environment_variable_name_profile_name(app_identifier: app_identifier,
+                                                                                    type: prov_type),
+                             parsed["Name"])
       
       return uuid
     end

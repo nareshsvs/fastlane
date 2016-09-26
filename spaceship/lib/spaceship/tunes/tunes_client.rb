@@ -229,16 +229,16 @@ module Spaceship
       # Now fill in the values we have
       # some values are nil, that's why there is a hash
       data['versionString'] = { value: version }
-      data['newApp']['name'] = { value: name }
-      data['newApp']['bundleId']['value'] = bundle_id
-      data['newApp']['primaryLanguage']['value'] = primary_language || 'English'
-      data['newApp']['vendorId'] = { value: sku }
-      data['newApp']['bundleIdSuffix']['value'] = bundle_id_suffix
-      data['companyName']['value'] = company_name if company_name
-      data['newApp']['appType'] = app_type
+      data['name'] = { value: name }
+      data['bundleId'] = { value: bundle_id }
+      data['primaryLanguage'] = { value: primary_language || 'English' }
+      data['vendorId'] = { value: sku }
+      data['bundleIdSuffix'] = { value: bundle_id_suffix }
+      data['companyName'] = { value: company_name } if company_name
+      data['enabledPlatformsForCreation'] = { value: [app_type] }
 
       data['initialPlatform'] = app_type
-      data['enabledPlatformsForCreation']['value'] = [app_type]
+      data['enabledPlatformsForCreation'] = { value: [app_type] }
 
       # Now send back the modified hash
       r = request(:post) do |req|
@@ -269,6 +269,16 @@ module Spaceship
     def get_resolution_center(app_id, platform)
       r = request(:get, "ra/apps/#{app_id}/platforms/#{platform}/resolutionCenter?v=latest")
       parse_response(r, 'data')
+    end
+
+    def get_rating_summary(app_id, platform, versionId = '')
+      r = request(:get, "ra/apps/#{app_id}/reviews/summary?platform=#{platform}&versionId=#{versionId}")
+      parse_response(r, 'data')
+    end
+
+    def get_reviews(app_id, platform, storefront, versionId = '')
+      r = request(:get, "ra/apps/#{app_id}/reviews?platform=#{platform}&storefront=#{storefront}&versionId=#{versionId}")
+      parse_response(r, 'data')['reviews']
     end
 
     #####################################################
@@ -805,6 +815,39 @@ module Spaceship
 
     def remove_tester_from_app!(tester, app_id)
       update_tester_from_app!(tester, app_id, false)
+    end
+
+    #####################################################
+    # @!group Sandbox Testers
+    #####################################################
+    def sandbox_testers(tester_class)
+      url = tester_class.url[:index]
+      r = request(:get, url)
+      parse_response(r, 'data')
+    end
+
+    def create_sandbox_tester!(tester_class: nil, email: nil, password: nil, first_name: nil, last_name: nil, country: nil)
+      url = tester_class.url[:create]
+      r = request(:post) do |req|
+        req.url url
+        req.body = {
+          user: {
+            emailAddress: { value: email },
+            password: { value: password },
+            confirmPassword: { value: password },
+            firstName: { value: first_name },
+            lastName: { value: last_name },
+            storeFront: { value: country },
+            birthDay: { value: 1 },
+            birthMonth: { value: 1 },
+            secretQuestion: { value: 'secret_question' },
+            secretAnswer: { value: 'secret_answer' },
+            sandboxAccount: nil
+          }
+        }.to_json
+        req.headers['Content-Type'] = 'application/json'
+      end
+      parse_response(r, 'data')['user']
     end
 
     #####################################################

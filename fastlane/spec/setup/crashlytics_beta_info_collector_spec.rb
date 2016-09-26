@@ -34,12 +34,12 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
       info.export_method = valid_export_method
     end
 
-    def validate_info
+    def validate_info(expected_emails: valid_emails, expected_groups: valid_groups)
       expect(info.api_key).to eq(valid_api_key)
       expect(info.build_secret).to eq(valid_build_secret)
       expect(info.crashlytics_path).to eq(valid_crashlytics_path)
-      expect(info.emails).to eq(valid_emails)
-      expect(info.groups).to eq(valid_groups)
+      expect(info.emails).to eq(expected_emails)
+      expect(info.groups).to eq(expected_groups)
       expect(info.schemes).to eq(valid_schemes)
       expect(info.export_method).to eq(valid_export_method)
     end
@@ -53,7 +53,7 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
       expect(info).not_to receive(:schemes=)
       expect(info).not_to receive(:export_method=)
 
-      expect(ui).not_to receive(:ask)
+      expect(ui).not_to receive(:input)
 
       collector.collect_info_into(info)
 
@@ -74,7 +74,7 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
       expect(info).not_to receive(:groups=)
       expect(info).not_to receive(:schemes=)
 
-      expect(ui).not_to receive(:ask)
+      expect(ui).not_to receive(:input)
 
       collector.collect_info_into(info)
 
@@ -95,7 +95,7 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
       expect(info).not_to receive(:groups=)
       expect(info).not_to receive(:schemes=)
 
-      expect(ui).not_to receive(:ask)
+      expect(ui).not_to receive(:input)
 
       collector.collect_info_into(info)
 
@@ -116,7 +116,7 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
       expect(info).not_to receive(:groups=)
       expect(info).not_to receive(:schemes=)
 
-      expect(ui).not_to receive(:ask)
+      expect(ui).not_to receive(:input)
 
       collector.collect_info_into(info)
 
@@ -138,7 +138,7 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
       expect(info).not_to receive(:schemes=)
 
       allow(ui).to receive(:important)
-      expect(ui).not_to receive(:ask)
+      expect(ui).not_to receive(:input)
 
       collector.collect_info_into(info)
 
@@ -153,7 +153,7 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
       info.api_key = 'invalid'
 
       allow(ui).to receive(:important)
-      expect(ui).to receive(:ask).with(/API Key/).and_return(valid_api_key)
+      expect(ui).to receive(:input).with(/API Key/).and_return(valid_api_key)
 
       collector.collect_info_into(info)
 
@@ -169,7 +169,7 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
 
       allow(ui).to receive(:important)
       expect(ui).to receive(:important).with("your error message here")
-      expect(ui).to receive(:ask).with(/Build Secret/).and_return(valid_build_secret)
+      expect(ui).to receive(:input).with(/Build Secret/).and_return(valid_build_secret)
 
       collector.collect_info_into(info)
 
@@ -185,7 +185,7 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
 
       allow(ui).to receive(:important)
       expect(ui).to receive(:important).with("your error message here")
-      expect(ui).to receive(:ask).with(/Crashlytics.framework/).and_return(valid_crashlytics_path)
+      expect(ui).to receive(:input).with(/Crashlytics.framework/).and_return(valid_crashlytics_path)
 
       collector.collect_info_into(info)
 
@@ -201,27 +201,42 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
 
       allow(ui).to receive(:important)
       expect(ui).to receive(:important).with("your error message here")
-      expect(ui).to receive(:ask).with(/Build Secret/).and_return('still not valid')
-      expect(ui).to receive(:ask).with(/Build Secret/).and_return(valid_build_secret)
+      expect(ui).to receive(:input).with(/Build Secret/).and_return('still not valid')
+      expect(ui).to receive(:input).with(/Build Secret/).and_return(valid_build_secret)
 
       collector.collect_info_into(info)
 
       validate_info
     end
 
-    it 'prompts for user input with invalid emails provided' do
+    it 'prompts for user input with invalid emails and no groups provided' do
+      allow(project_parser).to receive(:parse).and_return(valid_project_parser_result)
+
+      expect(email_fetcher).to receive(:fetch).and_return(nil)
+
+      info.emails = nil
+      info.groups = nil
+
+      allow(ui).to receive(:important)
+      expect(ui).to receive(:input).with(/email/).and_return(valid_emails.first)
+
+      collector.collect_info_into(info)
+
+      validate_info(expected_groups: nil)
+    end
+
+    it 'does not prompt for user input with groups and invalid emails provided' do
       allow(project_parser).to receive(:parse).and_return(valid_project_parser_result)
 
       expect(email_fetcher).to receive(:fetch).and_return(nil)
 
       info.emails = nil
 
-      allow(ui).to receive(:important)
-      expect(ui).to receive(:ask).with(/email/).and_return(valid_emails.first)
+      expect(ui).not_to receive(:input)
 
       collector.collect_info_into(info)
 
-      validate_info
+      validate_info(expected_emails: nil)
     end
 
     it 'continues to prompt for user input with invalid emails provided' do
@@ -230,14 +245,15 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
       expect(email_fetcher).to receive(:fetch).and_return(nil)
 
       info.emails = nil
+      info.groups = nil
 
       allow(ui).to receive(:important)
-      expect(ui).to receive(:ask).with(/email/).and_return('')
-      expect(ui).to receive(:ask).with(/email/).and_return(valid_emails.first)
+      expect(ui).to receive(:input).with(/email/).and_return('')
+      expect(ui).to receive(:input).with(/email/).and_return(valid_emails.first)
 
       collector.collect_info_into(info)
 
-      validate_info
+      validate_info(expected_groups: nil)
     end
 
     it 'has the user choose from a list when there are multiple schemes' do
@@ -264,7 +280,7 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
       info.schemes = []
 
       allow(ui).to receive(:important)
-      expect(ui).to receive(:ask).with(/scheme/).and_return('SchemeName')
+      expect(ui).to receive(:input).with(/scheme/).and_return('SchemeName')
 
       collector.collect_info_into(info)
 
@@ -279,8 +295,8 @@ describe Fastlane::CrashlyticsBetaInfoCollector do
       info.schemes = []
 
       allow(ui).to receive(:important)
-      expect(ui).to receive(:ask).with(/scheme/).and_return('')
-      expect(ui).to receive(:ask).with(/scheme/).and_return('SchemeName')
+      expect(ui).to receive(:input).with(/scheme/).and_return('')
+      expect(ui).to receive(:input).with(/scheme/).and_return('SchemeName')
 
       collector.collect_info_into(info)
 
