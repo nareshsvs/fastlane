@@ -60,5 +60,24 @@ module Match
       UI.error("Git repository. This might be caused by deleting the provisioning profile on the Dev Portal")
       UI.user_error!("To reset the provisioning profiles of your Apple account, you can use the `match nuke` feature, more information on https://github.com/fastlane/fastlane/tree/master/match")
     end
+    
+    def validate_profile(params, uuid)
+      Spaceship.provisioning_profile.all.find do |profile|
+        if $verbose then
+          puts ("Inspecting profile  "+profile.name+" uuid: "+profile.uuid+" "+uuid)
+        end
+        if profile.uuid == uuid then
+          if profile.status == "Active" then
+            return true
+          else
+            puts ("Profile status for "+profile.name+" is "+profile.status)
+            return false
+          end
+        end
+      end
+      puts ("Didnt find any profile with uuid "+uuid)
+      return false
+    end  
+    
   end
 end

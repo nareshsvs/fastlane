@@ -256,6 +256,7 @@ module Spaceship
           profiles.select do |profile|
             profile.class == self
           end
+          
         end
 
         # @return (Array) Returns an array of provisioning
@@ -263,9 +264,21 @@ module Spaceship
         #   Returns [] if no profiles were found
         #   This may also contain invalid or expired profiles
         def find_by_bundle_id(bundle_id, mac: false)
-          all(mac: mac).find_all do |profile|
-            profile.app.bundle_id == bundle_id
+          
+          profiles = all(mac: mac)
+          validProfiles = Array.new
+          
+          profiles.each do |profile|
+            if profile.app.bundle_id.eql?(bundle_id) == true then
+              puts 'Adding profile to valid profiles '+profile.app.bundle_id+' '+profile.status.to_s
+              validProfiles.push(profile)
+            end
           end
+          return validProfiles
+          
+          #all(mac: mac).find_all do |profile|
+          #profile.app.bundle_id.eql?(bundle_id)
+          #end
         end
       end
 
@@ -370,6 +383,7 @@ module Spaceship
       def certificate_valid?
         return false if (certificates || []).count == 0
         certificates.each do |c|
+          puts('Certitificate ids '+c.id.to_s+c.expires.to_s)
           if Spaceship::Certificate.all(mac: mac?).collect(&:id).include?(c.id)
             return true
           end

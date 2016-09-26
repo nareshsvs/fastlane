@@ -10,6 +10,8 @@ module Match
       params[:workspace] = GitHelper.clone(params[:git_url], params[:shallow_clone], skip_docs: params[:skip_docs], branch: params[:git_branch])
       spaceship = SpaceshipEnsure.new(params[:username]) unless params[:readonly]
 
+      puts ('Workspace '+params[:workspace])
+
       # Verify the App ID (as we don't want 'match' to fail at a later point)
       spaceship.bundle_identifier_exists(params) if spaceship
 
@@ -17,7 +19,6 @@ module Match
       cert_id = certificate(params: params)
       spaceship.certificate_exists(params, cert_id) if spaceship
 
-      # Provisioning Profile
       uuid = profile(params: params,
                      certificate_id: cert_id)
       spaceship.profile_exists(params, uuid) if spaceship
@@ -42,12 +43,14 @@ module Match
 
       certs = Dir[File.join(params[:workspace], "certs", cert_type.to_s, "*.cer")]
       keys = Dir[File.join(params[:workspace], "certs", cert_type.to_s, "*.p12")]
+      
+      puts ('Certs directory'+certs.to_s)
 
       if certs.count == 0 or keys.count == 0
         UI.important "Couldn't find a valid code signing identity in the git repo for #{cert_type}... creating one for you now"
-        UI.crash!("No code signing identity found and can not create a new one because you enabled `readonly`") if params[:readonly]
-        cert_path = Generator.generate_certificate(params, cert_type)
-        self.changes_to_commit = true
+        UI.user_error!("No code signing identity found")
+        #cert_path = Generator.generate_certificate(params, cert_type)
+        #self.changes_to_commit = true
       else
         cert_path = certs.last
         UI.message "Installing certificate..."
@@ -55,12 +58,12 @@ module Match
         if FastlaneCore::CertChecker.installed?(cert_path)
           UI.verbose "Certificate '#{File.basename(cert_path)}' is already installed on this machine"
         else
-          Utils.import(cert_path, params[:keychain_name])
+          Utils.import(cert_path, params[:keychain_name],params[:cert_password])
         end
 
         # Import the private key
         # there seems to be no good way to check if it's already installed - so just install it
-        Utils.import(keys.last, params[:keychain_name])
+        Utils.import(keys.last, params[:keychain_name],params[:cert_password])
       end
 
       return File.basename(cert_path).gsub(".cer", "") # Certificate ID
@@ -87,12 +90,26 @@ module Match
         self.changes_to_commit = true
       end
 
-      FastlaneCore::ProvisioningProfile.install(profile)
 
       parsed = FastlaneCore::ProvisioningProfile.parse(profile)
       uuid = parsed["UUID"]
+      
+      if params[:readonly] == false then
+        spaceship = SpaceshipEnsure.new(params[:username])
+        validProfile = spaceship.validate_profile(params, uuid)
+        if validProfile == false then
+          profile = Generator.generate_provisioning_profile(params: params,
+                                                         prov_type: prov_type,
+                                                    certificate_id: certificate_id)
+          self.changes_to_commit = true
+          parsed = FastlaneCore::ProvisioningProfile.parse(profile)
+          uuid = parsed["UUID"]
+        end
+      end
+      
+      FastlaneCore::ProvisioningProfile.install(profile)
       Utils.fill_environment(params, uuid)
-
+      
       return uuid
     end
 

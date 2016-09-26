@@ -52,15 +52,18 @@ module Match
 
     def self.commit_changes(path, message, git_url, branch = "master")
       Dir.chdir(path) do
-        return if `git status`.include?("nothing to commit")
+        
+        git_dir_command = "--git-dir=#{path}/.git --work-tree=#{path}"
+        
+        return if "git #{git_dir_command} status".include?("nothing to commit")
 
         Encrypt.new.encrypt_repo(path: path, git_url: git_url)
         File.write("match_version.txt", Match::VERSION) # unencrypted
 
         commands = []
-        commands << "git add -A"
-        commands << "git commit -m #{message.shellescape}"
-        commands << "git push origin #{branch.shellescape}"
+        commands << "git #{git_dir_command} add -A"
+        commands << "git #{git_dir_command} commit -m #{message.shellescape} "
+        commands << "git #{git_dir_command} push origin #{branch.shellescape} "
 
         UI.message "Pushing changes to remote git repo..."
 
@@ -107,6 +110,7 @@ module Match
         end
       end
     end
+    
 
     # Checks if a specific branch exists in the git repo
     def self.branch_exists?(branch)
