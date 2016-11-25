@@ -120,6 +120,7 @@ module Match
           UI.error "If you are certain that a profile should exist, double-check the recent changes to your match repository"
           UI.user_error! "No matching provisioning profiles found and can not create a new one because you enabled `readonly`. Check the output above for more information."
         end
+        UI.message "generating profile for bundle id #{app_identifier} since profile is nil or force params is set"
         profile = Generator.generate_provisioning_profile(params: params,
                                                        prov_type: prov_type,
                                                   certificate_id: certificate_id,
@@ -135,9 +136,11 @@ module Match
         spaceship = SpaceshipEnsure.new(params[:username])
         validProfile = spaceship.validate_profile(params, uuid)
         if validProfile == false then
+          UI.message "generating profile for bundle id #{app_identifier} since profile is invalid"
           profile = Generator.generate_provisioning_profile(params: params,
                                                          prov_type: prov_type,
-                                                    certificate_id: certificate_id)
+                                                    certificate_id: certificate_id,
+                                                  app_identifier: app_identifier)
           self.changes_to_commit = true
           parsed = FastlaneCore::ProvisioningProfile.parse(profile)
           uuid = parsed["UUID"]
