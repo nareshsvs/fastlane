@@ -30,6 +30,9 @@ module Spaceship
       # @return (String) App Status (e.g. 'readyForSale'). You should use `app_status` instead
       attr_accessor :raw_status
 
+      # @return (String) Build Version
+      attr_accessor :build_version
+
       # @return (Bool)
       attr_accessor :can_reject_version
 
@@ -133,6 +136,7 @@ module Spaceship
         'largeAppIcon.value.url' => :app_icon_url,
         'releaseOnApproval.value' => :release_on_approval,
         'status' => :raw_status,
+        'preReleaseBuild.buildVersion' => :build_version,
         'supportsAppleWatch' => :supports_apple_watch,
         'versionId' => :version_id,
         'version.value' => :version,
@@ -164,14 +168,13 @@ module Spaceship
         # @param application (Spaceship::Tunes::Application) The app this version is for
         # @param app_id (String) The unique Apple ID of this app
         # @param is_live (Boolean)
-        def find(application, app_id, is_live)
+        def find(application, app_id, is_live, platform: nil)
           # we only support applications
-          platform = Spaceship::Tunes::AppVersionCommon.find_platform(application.raw_data['versionSets'])
-          raise "We do not support BUNDLE types right now" if platform['type'] == 'BUNDLE'
+          raise "We do not support BUNDLE types right now" if application.type == 'BUNDLE'
 
           # too bad the "id" field is empty, it forces us to make more requests to the server
           # these could also be cached
-          attrs = client.app_version(app_id, is_live)
+          attrs = client.app_version(app_id, is_live, platform: platform)
           return nil unless attrs
 
           attrs[:application] = application
@@ -213,6 +216,16 @@ module Spaceship
           self.languages << new_language
         end
         nil
+      end
+
+      def current_build_number
+        if self.is_live?
+          build_version
+        else
+          if candidate_builds.length > 0
+            candidate_builds.first.build_version
+          end
+        end
       end
 
       # Returns an array of all builds that can be sent to review
@@ -366,16 +379,17 @@ module Spaceship
       # @param sort_order (Fixnum): The sort_order, from 1 to 5
       # @param language (String): The language for this screenshot
       # @param device (string): The device for this screenshot
-      def upload_screenshot!(screenshot_path, sort_order, language, device)
+      # @param is_messages (Bool): True if the screenshot is for iMessage
+      def upload_screenshot!(screenshot_path, sort_order, language, device, is_messages)
         raise "sort_order must be higher than 0" unless sort_order > 0
         raise "sort_order must not be > 5" if sort_order > 5
         # this will also check both language and device parameters
-        device_lang_screenshots = screenshots_data_for_language_and_device(language, device)["value"]
+        device_lang_screenshots = screenshots_data_for_language_and_device(language, device, is_messages)["value"]
 
         existing_sort_orders = device_lang_screenshots.map { |s| s["value"]["sortOrder"] }
         if screenshot_path # adding / replacing
           upload_file = UploadFile.from_path screenshot_path
-          screenshot_data = client.upload_screenshot(self, upload_file, device)
+          screenshot_data = client.upload_screenshot(self, upload_file, device, is_messages)
 
           # Since October 2016 we also need to pass the size, height, width and checksum
           # otherwise iTunes Connect validation will fail at a later point
@@ -397,7 +411,8 @@ module Spaceship
           # if this value is not set, iTC will fallback to another device type for screenshots
           language_details = raw_data_details.find { |d| d["language"] == language }["displayFamilies"]["value"]
           device_language_details = language_details.find { |display_family| display_family['name'] == device }
-          device_language_details["scaled"]["value"] = false
+          scaled_key = is_messages ? "messagesScaled" : "scaled"
+          device_language_details[scaled_key]["value"] = false
 
           if existing_sort_orders.include?(sort_order) # replace
             device_lang_screenshots[existing_sort_orders.index(sort_order)] = new_screenshot
@@ -433,7 +448,7 @@ module Spaceship
       def upload_trailer!(trailer_path, language, device, timestamp = "05.00", preview_image_path = nil)
         raise "No app trailer supported for iphone35" if device == 'iphone35'
 
-        device_lang_trailer = trailer_data_for_language_and_device(language, device)
+        device_lang_trailer = trailer_data_for_language_and_device(language, device, is_messages)
         if trailer_path # adding / replacing trailer / replacing preview
           raise "Invalid timestamp #{timestamp}" if (timestamp =~ /^[0-9][0-9].[0-9][0-9]$/).nil?
 
@@ -540,8 +555,9 @@ module Spaceship
         @transit_app_file = Tunes::TransitAppFile.factory(transit_app_file) if transit_app_file
       end
 
-      def screenshots_data_for_language_and_device(language, device)
-        container_data_for_language_and_device("screenshots", language, device)
+      def screenshots_data_for_language_and_device(language, device, is_messages)
+        data_field = is_messages ? "messagesScreenshots" : "screenshots"
+        container_data_for_language_and_device(data_field, language, device)
       end
 
       def trailer_data_for_language_and_device(language, device)
@@ -568,7 +584,7 @@ module Spaceship
 
         raw_data_details.each do |row|
           # Now that's one language right here
-          @screenshots[row['language']] = setup_screenshots_for(row)
+          @screenshots[row['language']] = setup_screenshots_for(row) + setup_messages_screenshots_for(row)
         end
       end
 
@@ -612,6 +628,34 @@ module Spaceship
           #       "isRequired": false,
           #       "errorKeys": null
           #     }],
+          #   "messagesScaled": {
+          #     "value": false,
+          #     "isEditable": false,
+          #     "isRequired": false,
+          #     "errorKeys": null
+          #   },
+          #   "messagesScreenshots": {
+          #     "value": [{
+          #       "value": {
+          #         "assetToken": "Purple62/v4/08/0a/04/080a0430-c2cc-2577-f491-9e0a09c58ffe/mzl.pbcpzqyg.jpg",
+          #         "sortOrder": 1,
+          #         "type": null,
+          #         "originalFileName": "ios-414-1.jpg"
+          #       },
+          #       "isEditable": true,
+          #       "isRequired": false,
+          #       "errorKeys": null
+          #     }, {
+          #       "value": {
+          #         "assetToken": "Purple71/v4/de/81/aa/de81aa10-64f6-332e-c974-9ee46adab675/mzl.cshkjvwl.jpg",
+          #         "sortOrder": 2,
+          #         "type": null,
+          #         "originalFileName": "ios-414-2.jpg"
+          #       },
+          #       "isEditable": true,
+          #       "isRequired": false,
+          #       "errorKeys": null
+          #     }],
           #     "isEditable": true,
           #     "isRequired": false,
           #     "errorKeys": null
@@ -625,6 +669,31 @@ module Spaceship
           # }
 
           display_family.fetch("screenshots", {}).fetch("value", []).each do |screenshot|
+            screenshot_data = screenshot["value"]
+            data = {
+                device_type: display_family['name'],
+                language: row["language"]
+            }.merge(screenshot_data)
+            result << Tunes::AppScreenshot.factory(data)
+          end
+        end
+
+        return result
+      end
+
+      # generates the nested data structure to represent screenshots
+      def setup_messages_screenshots_for(row)
+        return [] if row.nil? || row["displayFamilies"].nil?
+
+        display_families = row.fetch("displayFamilies", {}).fetch("value", nil)
+        return [] unless display_families
+
+        result = []
+
+        display_families.each do |display_family|
+          display_family_screenshots = display_family.fetch("messagesScreenshots", {})
+          next unless display_family_screenshots
+          display_family_screenshots.fetch("value", []).each do |screenshot|
             screenshot_data = screenshot["value"]
             data = {
                 device_type: display_family['name'],

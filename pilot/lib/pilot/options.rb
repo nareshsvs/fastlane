@@ -56,6 +56,12 @@ module Pilot
                                      description: "Don't wait for the build to process. If set to true, the changelog won't be set",
                                      is_string: false,
                                      default_value: false),
+        FastlaneCore::ConfigItem.new(key: :update_build_info_on_upload,
+                                     short_option: "-x",
+                                     env_name: "PILOT_UPDATE_BUILD_INFO_ON_UPLOAD",
+                                     description: "Update build info immediately after validation. This will set the changelog even if PILOT_SKIP_SUBMISSION is set, but will have no effect if PILOT_SKIP_WAITING_FOR_BUILD_PROCESSING is set",
+                                     is_string: false,
+                                     default_value: false),
         FastlaneCore::ConfigItem.new(key: :apple_id,
                                      short_option: "-p",
                                      env_name: "PILOT_APPLE_ID",
@@ -131,7 +137,16 @@ module Pilot
         FastlaneCore::ConfigItem.new(key: :itc_provider,
                                      env_name: "PILOT_ITC_PROVIDER",
                                      description: "The provider short name to be used with the iTMSTransporter to identify your team",
-                                     optional: true)
+                                     optional: true),
+        FastlaneCore::ConfigItem.new(key: :groups,
+                                     short_option: "-g",
+                                     env_name: "PILOT_GROUPS",
+                                     description: "Associate tester to one group or more by group name / group id. E.g. '-g \"Team 1\",\"Team 2\"'",
+                                     optional: true,
+                                     type: Array,
+                                     verify_block: proc do |value|
+                                       UI.user_error!("Could not evaluate array from '#{value}'") unless value.kind_of?(Array)
+                                     end)
       ]
     end
   end

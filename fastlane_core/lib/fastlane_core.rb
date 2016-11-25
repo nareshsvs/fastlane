@@ -25,6 +25,8 @@ require 'fastlane_core/project'
 require 'fastlane_core/device_manager'
 require 'fastlane_core/ui/ui'
 require 'fastlane_core/tool_collector'
+require 'fastlane_core/fastlane_folder'
+require 'fastlane_core/keychain_importer'
 
 # Third Party code
 require 'colored'

@@ -41,16 +41,20 @@ Currently available services include (all require the `Spaceship.app_service.` p
 
 ```
 app_group.(on|off)
+apple_pay.(on|off)
 associated_domains.(on|off)
 data_protection.(complete|unless_open|until_first_auth|off)
+game_center.(on|off)
 health_kit.(on|off)
 home_kit.(on|off)
 wireless_accessory.(on|off)
 icloud.(on|off)
 cloud_kit.(xcode5_compatible|cloud_kit)
+in_app_purchase.(on|off)
 inter_app_audio.(on|off)
 passbook.(on|off)
 push_notification.(on|off)
+siri_kit.(on|off)
 vpn_configuration.(on|off)
 ```
 
@@ -226,7 +230,22 @@ Spaceship.provisioning_profile.all.find_all { |p| !p.valid? || !p.certificate_va
 ## Devices
 
 ```ruby
+# Get all enabled devices
 all_devices = Spaceship.device.all
+
+# Disable first device
+all_devices.first.disable!
+
+# Find disabled device and enable it
+Spaceship.device.find_by_udid("44ee59893cb...", include_disabled: true).enable!
+
+# Get list of all devices, including disabled ones, and filter the result to only include disabled devices use enabled? or disabled? methods
+disabled_devices = Spaceship.device.all(include_disabled: true).select do |device|
+  !device.enabled?
+end
+
+# or to do the same thing, just more Ruby like with disabled? method
+disabled_devices = Spaceship.device.all(include_disabled: true).select(&:disabled?)
 
 # Register a new device
 Spaceship.device.create!(name: "Private iPhone 6", udid: "5814abb3...")

@@ -52,6 +52,15 @@ module Deliver
                                      conflict_block: proc do |value|
                                        UI.user_error!("You can't use 'pkg' and '#{value.key}' options in one run.")
                                      end),
+        FastlaneCore::ConfigItem.new(key: :platform,
+                                     short_option: "-j",
+                                     env_name: "DELIVER_PLATFORM",
+                                     description: "The platform to use (optional)",
+                                     optional: true,
+                                     default_value: "ios",
+                                     verify_block: proc do |value|
+                                       UI.user_error!("The platform can only be ios, appletvos, or osx") unless %('ios', 'appletvos', 'osx').include? value
+                                     end),
         FastlaneCore::ConfigItem.new(key: :metadata_path,
                                      short_option: '-m',
                                      description: "Path to the folder containing the metadata files",
@@ -159,6 +168,11 @@ module Deliver
                                      env_name: "DELIVER_ITC_PROVIDER",
                                      description: "The provider short name to be used with the iTMSTransporter to identify your team",
                                      optional: true),
+        FastlaneCore::ConfigItem.new(key: :overwrite_screenshots,
+                                     env_name: "DELIVER_OVERWRITE_SCREENSHOTS",
+                                     description: "Clear all previously uploaded screenshots before uploading the new ones",
+                                     is_string: false,
+                                     default_value: false),
 
         # App Metadata
         # Non Localised
