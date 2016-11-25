@@ -120,8 +120,8 @@ module Match
         FastlaneCore::ConfigItem.new(key: :cert_password,
                                     env_name: "CERT_PASSWORD",
                                     description: "P12 files export password",
-                                    optional: true,
-                                    short_option: "-p")
+                                    optional: true
+                                    )
       ]
     end
   end
