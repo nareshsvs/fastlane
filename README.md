@@ -7,7 +7,7 @@ fastlane
 
 [![Twitter: @FastlaneTools](https://img.shields.io/badge/contact-@FastlaneTools-blue.svg?style=flat)](https://twitter.com/FastlaneTools)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat)](https://github.com/fastlane/fastlane/blob/master/LICENSE)
-[![Gem](https://img.shields.io/gem/v/fastlane.svg?style=flat)](http://rubygems.org/gems/fastlane)
+[![Gem](https://img.shields.io/gem/v/fastlane.svg?style=flat)](https://rubygems.org/gems/fastlane)
 [![Build Status](https://img.shields.io/circleci/project/fastlane/fastlane/master.svg?style=flat)](https://circleci.com/gh/fastlane/fastlane)
 
 #### ✨ Check out [docs.fastlane.tools](https://docs.fastlane.tools) on how to get started with fastlane ✨
@@ -32,7 +32,7 @@ Then to deploy a new 'beta' version of your app just run
 
               |  fastlane
 --------------------------|------------------------------------------------------------
-:sparkles: | Connect iOS, Mac, and Android build tools into one workflow (both `fastlane` tools and third party tools)
+:sparkles: | Connect iOS, Mac, and Android build tools into one workflow (both _fastlane_ tools and third party tools)
 :monorail: | Define different `deployment lanes` for App Store deployment, beta builds, or testing
 :ship: | Deploy from any computer, including a CI server
 :wrench: | Extend and customise functionality
@@ -43,10 +43,10 @@ Then to deploy a new 'beta' version of your app just run
 :rocket: | Saves you **hours** for every app update you release
 :pencil2: | Flexible configuration using a fully customisable `Fastfile`
 :mountain_cableway: | Implement a fully working Continuous Delivery process
-:ghost: | [Jenkins Integration](https://github.com/fastlane/fastlane/blob/master/fastlane/docs/Jenkins.md): Show output directly in test results
+:ghost: | [Jenkins Integration](https://docs.fastlane.tools/best-practices/continuous-integration/#jenkins-integration): Show output directly in test results
 :book: | Automatically generate Markdown documentation of your lane configurations
 :hatching_chick: | Over 170 built-in integrations available
-:computer: | Support for iOS, Mac, and Android apps
+:computer: | Support for iOS, macOS, and Android apps
 :octocat: | Full Git and Mercurial support
 
 <hr />
@@ -60,7 +60,9 @@ Then to deploy a new 'beta' version of your app just run
 ## Installation
 Make sure you have the latest version of the Xcode command line tools installed:
 
-    xcode-select --install
+```
+xcode-select --install
+```
 
 ### Choose your installation method:
 
@@ -77,7 +79,7 @@ Make sure you have the latest version of the Xcode command line tools installed:
 </tr>
 <tr> 
 <td width="33%"><code>brew cask install fastlane</code></td>
-<td width="33%"><a href="https://kits-crashlytics-com.s3.amazonaws.com/fastlane/standalone/latest.zip">Download the zip file</a>. Then double click on the <code>install</code> script (or run it in a terminal window).</td>
+<td width="33%"><a href="https://download.fastlane.tools/fastlane.zip">Download the zip file</a>. Then double click on the <code>install</code> script (or run it in a terminal window).</td>
 <td width="33%"><code>sudo gem install fastlane -NV</code></td>
 </tr>
 </table>

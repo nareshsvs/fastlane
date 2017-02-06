@@ -82,25 +82,6 @@ module Gym
         when /Codesign check fails/
           print "A general code signing error occurred. Make sure you passed a valid"
           print "provisioning profile and code signing identity."
-        when /expected one of \{\}/
-          print "It seems like you ran into this radar"
-          print "https://openradar.appspot.com/radar?id=4952000420642816"
-          print "You can temporarily use the :use_legacy_build_api option to work around the issue:"
-          print "In your Fastfile:"
-          print "    gym(use_legacy_build_api: true)"
-          print "On the command line:"
-          print "    gym --use_legacy_build_api"
-        when /IDEDistributionErrorDomain error 1/
-        when /Error Domain=IDEDistributionErrorDomain Code=/
-          standard_output = read_standard_output output
-          print standard_output if standard_output
-          print "There was an error exporting your application"
-          print "Unfortunately the new Xcode export API is unstable and causes problems on some projects"
-          print "You can temporarily use the :use_legacy_build_api option to work around the issue:"
-          print "In your Fastfile:"
-          print "    gym(use_legacy_build_api: true)"
-          print "On the command line:"
-          print "    gym --use_legacy_build_api"
         end
         print_full_log_path
         UI.user_error!("Error packaging up the application")
@@ -146,7 +127,7 @@ module Gym
         # sure they are aware of the Xcode version and SDK they're using
         values = {
           xcode_path: File.expand_path("../..", FastlaneCore::Helper.xcode_path),
-          gym_version: Gym::VERSION
+          gym_version: Fastlane::VERSION
         }
 
         sdk_path = Gym.project.build_settings(key: "SDKROOT")

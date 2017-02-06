@@ -1,7 +1,7 @@
 module Supply
   class Uploader
     def perform_upload
-      FastlaneCore::PrintTable.print_values(config: Supply.config, hide_keys: [:issuer], title: "Summary for supply #{Supply::VERSION}")
+      FastlaneCore::PrintTable.print_values(config: Supply.config, hide_keys: [:issuer], title: "Summary for supply #{Fastlane::VERSION}")
 
       client.begin_edit(package_name: Supply.config[:package_name])
 
@@ -113,6 +113,13 @@ module Supply
 
       apk_paths.each do |apk_path|
         apk_version_codes.push(upload_binary_data(apk_path))
+      end
+
+      mapping_paths = [Supply.config[:mapping]] unless (mapping_paths = Supply.config[:mapping_paths])
+      mapping_paths.zip(apk_version_codes).each do |mapping_path, version_code|
+        if mapping_path
+          client.upload_mapping(mapping_path, version_code)
+        end
       end
 
       update_track(apk_version_codes)

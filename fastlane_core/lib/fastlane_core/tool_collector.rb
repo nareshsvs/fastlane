@@ -55,7 +55,7 @@ module FastlaneCore
     end
 
     def did_finish
-      return false if ENV["FASTLANE_OPT_OUT_USAGE"]
+      return false if FastlaneCore::Env.truthy?("FASTLANE_OPT_OUT_USAGE")
 
       if !did_show_message? and !Helper.is_ci?
         show_message
@@ -129,10 +129,16 @@ module FastlaneCore
     end
 
     def did_show_message?
-      path = File.join(File.expand_path('~'), '.did_show_opt_info')
-      did_show = File.exist?(path)
-      File.write(path, '1') unless did_show
-      did_show
+      file_name = ".did_show_opt_info"
+
+      legacy_path = File.join(File.expand_path('~'), file_name)
+      new_path = File.join(FastlaneCore.fastlane_user_dir, file_name)
+      did_show = File.exist?(new_path) || File.exist?(legacy_path)
+
+      return did_show if did_show
+
+      File.write(new_path, '1')
+      false
     end
 
     def determine_version(name)
@@ -140,6 +146,9 @@ module FastlaneCore
     end
 
     def self.determine_version(name)
+      require 'fastlane'
+      return Fastlane::VERSION if Fastlane::ActionsList.find_action_named(name.to_s)
+
       begin
         name = name.to_s.downcase
 

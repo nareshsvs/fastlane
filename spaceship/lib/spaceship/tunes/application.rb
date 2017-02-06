@@ -61,9 +61,10 @@ module Spaceship
 
         # @return (Spaceship::Tunes::Application) Returns the application matching the parameter
         #   as either the App ID or the bundle identifier
-        def find(identifier)
+        def find(identifier, mac: false)
           all.find do |app|
-            (app.apple_id == identifier.to_s or app.bundle_id == identifier)
+            ((app.apple_id && app.apple_id.casecmp(identifier.to_s) == 0) || (app.bundle_id && app.bundle_id.casecmp(identifier.to_s) == 0)) &&
+              app.version_sets.any? { |v| (mac ? ["osx"] : ["ios", "appletvos"]).include?(v.platform) }
           end
         end
 
@@ -79,14 +80,18 @@ module Spaceship
         #   can't be changed after you submit your first build.
         # @param company_name (String): The company name or developer name to display on the App Store for your apps.
         # It cannot be changed after you create your first app.
-        def create!(name: nil, primary_language: nil, version: nil, sku: nil, bundle_id: nil, bundle_id_suffix: nil, company_name: nil)
+        # @param platform (String): Platform one of (ios,osx)
+        #  should it be an ios or an osx app
+
+        def create!(name: nil, primary_language: nil, version: nil, sku: nil, bundle_id: nil, bundle_id_suffix: nil, company_name: nil, platform: nil)
           client.create_application!(name: name,
                          primary_language: primary_language,
                                   version: version,
                                       sku: sku,
                                 bundle_id: bundle_id,
                                 bundle_id_suffix: bundle_id_suffix,
-                                company_name: company_name)
+                                company_name: company_name,
+                                    platform: platform)
         end
       end
 
@@ -232,6 +237,26 @@ module Spaceship
       # The current price tier
       def price_tier
         client.price_tier(self.apple_id)
+      end
+
+      # set the availability. This method doesn't require `save` to be called
+      def update_availability!(availability)
+        client.update_availability!(self.apple_id, availability)
+      end
+
+      # The current availability.
+      def availability
+        client.availability(self.apple_id)
+      end
+
+      #####################################################
+      # @!group in_app_purchases
+      #####################################################
+      # Get base In-App-Purchases object
+      def in_app_purchases
+        attrs = {}
+        attrs[:application] = self
+        Tunes::IAP.factory(attrs)
       end
 
       #####################################################
