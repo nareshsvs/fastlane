@@ -6,14 +6,14 @@ module Match
       @dir = Dir.mktmpdir
 
       command = "git clone '#{git_url}' '#{@dir}'"
-      command << " --depth 1" if shallow_clone
+      command << " --depth 1 --no-single-branch" if shallow_clone
 
       UI.message "Cloning remote git repo..."
       begin
         # GIT_TERMINAL_PROMPT will fail the `git clone` command if user credentials are missing
         FastlaneCore::CommandExecutor.execute(command: "GIT_TERMINAL_PROMPT=0 #{command}",
-                                            print_all: $verbose,
-                                        print_command: $verbose)
+                                            print_all: FastlaneCore::Globals.verbose?,
+                                        print_command: FastlaneCore::Globals.verbose?)
       rescue
         UI.error("Error cloning certificates repo, please make sure you have read access to the repository you want to use")
         UI.error("Run the following command manually to make sure you're properly authenticated:")
@@ -78,8 +78,8 @@ module Match
 
         commands.each do |command|
           FastlaneCore::CommandExecutor.execute(command: command,
-                                              print_all: $verbose,
-                                          print_command: $verbose)
+                                              print_all: FastlaneCore::Globals.verbose?,
+                                          print_command: FastlaneCore::Globals.verbose?)
         end
       end
       FileUtils.rm_rf(path)
@@ -93,7 +93,6 @@ module Match
       return unless @dir
 
       FileUtils.rm_rf(@dir)
-      UI.success "🔒  Successfully encrypted certificates repo" # so the user is happy
       @dir = nil
     end
 
@@ -117,8 +116,8 @@ module Match
       Dir.chdir(@dir) do
         commands.each do |command|
           FastlaneCore::CommandExecutor.execute(command: command,
-                                                print_all: $verbose,
-                                                print_command: $verbose)
+                                                print_all: FastlaneCore::Globals.verbose?,
+                                                print_command: FastlaneCore::Globals.verbose?)
         end
       end
     end
@@ -130,8 +129,8 @@ module Match
 
       result = Dir.chdir(@dir) do
         FastlaneCore::CommandExecutor.execute(command: "git branch --list origin/#{branch.shellescape} --no-color -r",
-                                              print_all: $verbose,
-                                              print_command: $verbose)
+                                              print_all: FastlaneCore::Globals.verbose?,
+                                              print_command: FastlaneCore::Globals.verbose?)
       end
       return !result.empty?
     end

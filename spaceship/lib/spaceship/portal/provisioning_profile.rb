@@ -174,8 +174,10 @@ module Spaceship
                     raise "Can't find class '#{attrs['distributionMethod']}'"
                   end
 
-          # eagerload the Apps using the same client if we have to.
-          attrs['appId'] = App.set_client(@client).factory(attrs['appId'])
+          # Parse the dates
+          # rubocop:disable Style/RescueModifier
+          attrs['dateExpire'] = (Time.parse(attrs['dateExpire']) rescue attrs['dateExpire'])
+          # rubocop:enable Style/RescueModifier
 
           klass.client = @client
           obj = klass.new(attrs)
@@ -258,19 +260,23 @@ module Spaceship
         #  If you're calling this from a subclass (like AdHoc), this will
         #  only return the profiles that are of this type
         # @param mac (Bool) (optional): Pass true to get all Mac provisioning profiles
-        # @param xcode (Bool) (optional): Pass true to include Xcode managed provisioning profiles
+        # @param xcode DEPRECATED
         def all(mac: false, xcode: false)
           profiles = client.provisioning_profiles(mac: mac).map do |profile|
             self.factory(profile)
           end
 
           # filter out the profiles managed by xcode
-          profiles.delete_if(&:managed_by_xcode?) unless xcode
+          if xcode
+            warn('Apple API no longer returns XCode managed Provisioning Profiles')
+          else
+            profiles.delete_if(&:managed_by_xcode?)
+          end
 
           return profiles if self == ProvisioningProfile
 
           # To distinguish between AppStore and AdHoc profiles, we need to send
-          # a details request (see `fetch_details`). This is an expensive operation
+          # a details request (see `profile_details`). This is an expensive operation
           # which we can't do for every single provisioning profile
           # Instead we'll treat App Store profiles the same way as Ad Hoc profiles
           # Spaceship::ProvisioningProfile::AdHoc.all will return the same array as
@@ -468,8 +474,6 @@ module Spaceship
       end
 
       def devices
-        fetch_details
-
         if (@devices || []).empty?
           @devices = (self.profile_details["devices"] || []).collect do |device|
             Device.set_client(client).factory(device)
@@ -480,15 +484,17 @@ module Spaceship
       end
 
       def certificates
-        fetch_details
-
         if (@certificates || []).empty?
           @certificates = (profile_details["certificates"] || []).collect do |cert|
             Certificate.set_client(client).factory(cert)
           end
         end
 
-        return @certificates
+        @certificates
+      end
+
+      def app
+        App.set_client(client).new(profile_details['appId'])
       end
 
       # @return (Bool) Is this current provisioning profile adhoc?
@@ -499,12 +505,11 @@ module Spaceship
         return devices.count > 0
       end
 
-      private
-
-      def fetch_details
+      # This is an expensive operation as it triggers a new request
+      def profile_details
         # Since 15th September 2016 certificates and devices are hidden behind another request
         # see https://github.com/fastlane/fastlane/issues/6137 for more information
-        self.profile_details ||= client.provisioning_profile_details(provisioning_profile_id: self.id, mac: mac?)
+        @profile_details ||= client.provisioning_profile_details(provisioning_profile_id: self.id, mac: mac?)
       end
     end
   end

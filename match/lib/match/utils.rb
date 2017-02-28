@@ -43,7 +43,7 @@ module Match
 
     # Fill in an environment variable, ready to be used in _xcodebuild_
     def self.fill_environment(key, value)
-      UI.important "Setting environment variable '#{key}' to '#{value}'" if $verbose
+      UI.important "Setting environment variable '#{key}' to '#{value}'" if FastlaneCore::Globals.verbose?
       ENV[key] = value
     end
 
@@ -59,10 +59,14 @@ module Match
       (base_environment_variable_name(app_identifier: app_identifier, type: type, platform: platform) + ["profile-name"]).join("_")
     end
 
+    def self.environment_variable_name_profile_path(app_identifier: nil, type: nil, platform: :ios)
+      (base_environment_variable_name(app_identifier: app_identifier, type: type, platform: platform) + ["profile-path"]).join("_")
+    end
+
     def self.get_cert_info(cer_certificate_path)
       command = "openssl x509 -inform der -in #{cer_certificate_path.shellescape} -subject -dates -noout"
       command << " &" # start in separate process
-      output = Helper.backticks(command, print: $verbose)
+      output = Helper.backticks(command, print: FastlaneCore::Globals.verbose?)
 
       # openssl output:
       # subject= /UID={User ID}/CN={Certificate Name}/OU={Certificate User}/O={Organisation}/C={Country}\n

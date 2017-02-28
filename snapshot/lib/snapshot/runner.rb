@@ -81,7 +81,7 @@ module Snapshot
         UI.important "Tests failed, re-trying #{retries + 1} out of #{Snapshot.config[:number_of_retries] + 1} times"
         run_for_device_and_language(language, locale, device, launch_arguments, retries + 1)
       else
-        UI.error "Backtrace:\n\t#{ex.backtrace.join("\n\t")}" if $verbose
+        UI.error "Backtrace:\n\t#{ex.backtrace.join("\n\t")}" if FastlaneCore::Globals.verbose?
         self.collected_errors << ex
         raise ex if Snapshot.config[:stop_after_first_error]
         return false # for the results
@@ -107,8 +107,8 @@ module Snapshot
       components = [launch_arguments].delete_if { |a| a.to_s.length == 0 }
 
       UI.header("Collecting system logs #{device_name} - #{language}")
-      logarchive_dest = File.join(language_folder, "system_logs-" + Digest::MD5.hexdigest(components.join("-")) + ".logarchive")
-      FastlaneCore::Simulator.copy_logarchive(device, logarchive_dest)
+      log_identity = Digest::MD5.hexdigest(components.join("-"))
+      FastlaneCore::Simulator.copy_logs(device, log_identity, language_folder)
     end
 
     def print_results(results)
@@ -298,7 +298,7 @@ module Snapshot
         content = File.read(path)
 
         unless content.include?(current_version)
-          UI.error "Your '#{path}' is outdated, please run `snapshot update`"
+          UI.error "Your '#{path}' is outdated, please run `fastlane snapshot update`"
           UI.error "to update your Helper file"
           UI.user_error!("Please update your Snapshot Helper file")
         end
