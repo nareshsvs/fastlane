@@ -77,9 +77,7 @@ module Match
     
     def validate_profile(params, uuid)
       Spaceship.provisioning_profile.all.find do |profile|
-        if $verbose then
-          puts ("Inspecting profile  "+profile.name+" uuid: "+profile.uuid+" "+uuid)
-        end
+        puts ("Inspecting profile  "+profile.name+" uuid: "+profile.uuid+" "+uuid)
         if profile.uuid == uuid then
           if profile.status == "Active" then
             return true

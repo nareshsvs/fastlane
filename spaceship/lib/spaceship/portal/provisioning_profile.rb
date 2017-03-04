@@ -312,23 +312,15 @@ module Spaceship
         #   Returns [] if no profiles were found
         #   This may also contain invalid or expired profiles
         def find_by_bundle_id(bundle_id, mac: false)
-          
-          profiles = all(mac: mac)
-          validProfiles = Array.new
-          
-          profiles.each do |profile|
-            if profile.app.bundle_id.eql?(bundle_id) == true then
-              puts 'Adding profile to valid profiles '+profile.app.bundle_id+' '+profile.status.to_s
-              validProfiles.push(profile)
-            end
+          all(mac: mac).find_all do |profile|
+            profile.app.bundle_id == bundle_id
           end
-          return validProfiles
+        end
+      end
           
           #all(mac: mac).find_all do |profile|
           #profile.app.bundle_id.eql?(bundle_id)
           #end
-        end
-      end
 
       # Represents a Development profile from the Dev Portal
       class Development < ProvisioningProfile
