@@ -5,12 +5,14 @@ describe Snapshot do
     let(:iphone6_9_3_2) { FastlaneCore::DeviceManager::Device.new(name: "iPhone 6s", os_version: os_version, udid: "22222", state: "Don't Care", is_simulator: true) }
     let(:iphone6_9_0) { FastlaneCore::DeviceManager::Device.new(name: "iPhone 6", os_version: '9.0', udid: "11111", state: "Don't Care", is_simulator: true) }
     let(:iphone6_9_2) { FastlaneCore::DeviceManager::Device.new(name: "iPhone 6", os_version: '9.2', udid: "11111", state: "Don't Care", is_simulator: true) }
+    let(:iphone6_10_1) { FastlaneCore::DeviceManager::Device.new(name: "iPhone 6 (10.1)", os_version: '10.1', udid: "33333", state: "Don't Care", is_simulator: true) }
+    let(:iphone6s_10_1) { FastlaneCore::DeviceManager::Device.new(name: "iPhone 6s (10.1)", os_version: '10.1', udid: "98765", state: "Don't Care", is_simulator: true) }
     let(:ipad_air_9_1) { FastlaneCore::DeviceManager::Device.new(name: "iPad Air", os_version: '9.1', udid: "12345", state: "Don't Care", is_simulator: true) }
     let(:appleTV) { FastlaneCore::DeviceManager::Device.new(name: "Apple TV 1080p", os_version: os_version, udid: "22222", state: "Don't Care", is_simulator: true) }
 
     before do
       allow(Snapshot::LatestOsVersion).to receive(:version).and_return(os_version)
-      allow(FastlaneCore::DeviceManager).to receive(:simulators).and_return([iphone6_9_0, iphone6_9_3, iphone6_9_2, appleTV, iphone6_9_3_2, ipad_air_9_1])
+      allow(FastlaneCore::DeviceManager).to receive(:simulators).and_return([iphone6_9_0, iphone6_9_3, iphone6_9_2, appleTV, iphone6_9_3_2, iphone6_10_1, iphone6s_10_1, ipad_air_9_1])
       fake_out_xcode_project_loading
     end
 
@@ -36,24 +38,15 @@ describe Snapshot do
         @config = FastlaneCore::Configuration.create(Snapshot::Options.available_options, {
           output_directory: '/tmp/scan_results',
           output_simulator_logs: true,
-          devices: ['iPhone 6', 'iPhone 6s'],
+          devices: ['iPhone 6 (10.1)', 'iPhone 6s'],
           project: './snapshot/example/Example.xcodeproj',
-          scheme: 'ExampleUITests'
+          scheme: 'ExampleUITests',
+          namespace_log_files: true
         })
       end
 
       it 'copies all device log archives to the output directory on macOS 10.12 (Siera)' do
         Snapshot.config = @config
-
-        expect(FileUtils).
-          to receive(:cp_r).
-          with(/.*/, %r{de-DE/system_logs-cfcd208495d565ef66e7dff9f98764da.logarchive}).
-          and_return(true)
-
-        expect(FileUtils).
-          to receive(:cp_r).
-          with(/.*/, %r{en-US/system_logs-cfcd208495d565ef66e7dff9f98764da.logarchive}).
-          and_return(true)
 
         allow(FastlaneCore::CommandExecutor).
           to receive(:execute).
@@ -62,23 +55,27 @@ describe Snapshot do
 
         expect(FastlaneCore::CommandExecutor).
           to receive(:execute).
-          with(command: "xcrun simctl getenv 11111 SIMULATOR_SHARED_RESOURCES_DIRECTORY 2>/dev/null", print_all: false, print_command: true).
-          and_return("/tmp/folder")
+          with(command: "xcrun simctl spawn 33333 log collect --output /tmp/scan_results/de-DE/system_logs-cfcd208495d565ef66e7dff9f98764da.logarchive 2>/dev/null", print_all: false, print_command: true)
 
         expect(FastlaneCore::CommandExecutor).
           to receive(:execute).
-          with(command: "xcrun simctl spawn 11111 log collect 2>/dev/null", print_all: false, print_command: true).
-          and_return("/tmp/folder")
+          with(command: "xcrun simctl spawn 98765 log collect --output /tmp/scan_results/en-US/system_logs-cfcd208495d565ef66e7dff9f98764da.logarchive 2>/dev/null", print_all: false, print_command: true)
 
-        expect(FastlaneCore::CommandExecutor).
-          to receive(:execute).
-          with(command: "xcrun simctl getenv 22222 SIMULATOR_SHARED_RESOURCES_DIRECTORY 2>/dev/null", print_all: false, print_command: true).
-          and_return("/tmp/folder")
+        Snapshot::Runner.new.copy_simulator_logs("iPhone 6 (10.1)", "de-DE", nil, 0)
+        Snapshot::Runner.new.copy_simulator_logs("iPhone 6s (10.1)", "en-US", nil, 0)
+      end
 
-        expect(FastlaneCore::CommandExecutor).
-          to receive(:execute).
-          with(command: "xcrun simctl spawn 22222 log collect 2>/dev/null", print_all: false, print_command: true).
-          and_return("/tmp/folder")
+      it 'copies all iOS 9 device log files to the output directory on macOS 10.12 (Sierra)' do
+        Snapshot.config = @config
+
+        allow(File).to receive(:exist?).with(/.*system\.log/).and_return(true)
+        allow(FastlaneCore::CommandExecutor).to receive(:execute).with(command: "sw_vers -productVersion", print_all: false, print_command: false).and_return('10.12')
+
+        expect(FileUtils).to receive(:rm_f).with(%r{#{Snapshot.config[:output_directory]}/de-DE/system-cfcd208495d565ef66e7dff9f98764da\.log}).and_return(true)
+        expect(FileUtils).to receive(:cp).with(/.*/, %r{#{Snapshot.config[:output_directory]}/de-DE/system-cfcd208495d565ef66e7dff9f98764da\.log}).and_return(true)
+
+        expect(FileUtils).to receive(:rm_f).with(%r{#{Snapshot.config[:output_directory]}/en-US/system-cfcd208495d565ef66e7dff9f98764da\.log}).and_return(true)
+        expect(FileUtils).to receive(:cp).with(/.*/, %r{#{Snapshot.config[:output_directory]}/en-US/system-cfcd208495d565ef66e7dff9f98764da\.log}).and_return(true)
 
         Snapshot::Runner.new.copy_simulator_logs("iPhone 6s", "de-DE", nil, 0)
         Snapshot::Runner.new.copy_simulator_logs("iPhone 6", "en-US", nil, 0)
@@ -101,8 +98,8 @@ describe Snapshot do
       end
     end
 
-    describe "Valid Configuration" do
-      let(:options) { { project: "./snapshot/example/Example.xcodeproj", scheme: "ExampleUITests" } }
+    describe "Valid iOS Configuration" do
+      let(:options) { { project: "./snapshot/example/Example.xcodeproj", scheme: "ExampleUITests", namespace_log_files: true } }
 
       def configure(options)
         Snapshot.config = FastlaneCore::Configuration.create(Snapshot::Options.available_options, options)
@@ -112,7 +109,7 @@ describe Snapshot do
         it "uses the default parameters" do
           configure options
           expect(Dir).to receive(:mktmpdir).with("snapshot_derived").and_return("/tmp/path/to/snapshot_derived")
-          command = Snapshot::TestCommandGenerator.generate(device_type: "iPhone 6")
+          command = Snapshot::TestCommandGenerator.generate(device_type: "iPhone 6", language: "en", locale: nil)
           id = command.join('').match(/id=(.+?),/)[1]
           ios = command.join('').match(/OS=(\d+.\d+)/)[1]
           expect(command).to eq(
@@ -126,7 +123,7 @@ describe Snapshot do
               "FASTLANE_SNAPSHOT=YES",
               :build,
               :test,
-              "| tee #{File.expand_path("#{FastlaneCore::Helper.buildlog_path}/snapshot/Example-ExampleUITests.log")} | xcpretty "
+              "| tee #{File.expand_path("#{FastlaneCore::Helper.buildlog_path}/snapshot/Example-ExampleUITests-iPhone\\ 6-en.log")} | xcpretty "
             ]
           )
         end
@@ -134,7 +131,7 @@ describe Snapshot do
         it "allows to supply custom xcargs" do
           configure options.merge(xcargs: "-only-testing:TestBundle/TestSuite/Screenshots")
           expect(Dir).to receive(:mktmpdir).with("snapshot_derived").and_return("/tmp/path/to/snapshot_derived")
-          command = Snapshot::TestCommandGenerator.generate(device_type: "iPhone 6")
+          command = Snapshot::TestCommandGenerator.generate(device_type: "iPhone 6", language: "en", locale: nil)
           id = command.join('').match(/id=(.+?),/)[1]
           ios = command.join('').match(/OS=(\d+.\d+)/)[1]
           expect(command).to eq(
@@ -149,7 +146,7 @@ describe Snapshot do
               "FASTLANE_SNAPSHOT=YES",
               :build,
               :test,
-              "| tee #{File.expand_path('~/Library/Logs/snapshot/Example-ExampleUITests.log')} | xcpretty "
+              "| tee #{File.expand_path('~/Library/Logs/snapshot/Example-ExampleUITests-iPhone\\ 6-en.log')} | xcpretty "
             ]
           )
         end
@@ -157,7 +154,7 @@ describe Snapshot do
         it "uses the default parameters on tvOS too" do
           configure options.merge(devices: ["Apple TV 1080p"])
           expect(Dir).to receive(:mktmpdir).with("snapshot_derived").and_return("/tmp/path/to/snapshot_derived")
-          command = Snapshot::TestCommandGenerator.generate(device_type: "Apple TV 1080p")
+          command = Snapshot::TestCommandGenerator.generate(device_type: "Apple TV 1080p", language: "en", locale: nil)
           id = command.join('').match(/id=(.+?),/)[1]
           os = command.join('').match(/OS=(\d+.\d+)/)[1]
           expect(command).to eq(
@@ -171,7 +168,7 @@ describe Snapshot do
               "FASTLANE_SNAPSHOT=YES",
               :build,
               :test,
-              "| tee #{File.expand_path("#{FastlaneCore::Helper.buildlog_path}/snapshot/Example-ExampleUITests.log")} | xcpretty "
+              "| tee #{File.expand_path("#{FastlaneCore::Helper.buildlog_path}/snapshot/Example-ExampleUITests-Apple\\ TV\\ 1080p-en.log")} | xcpretty "
             ]
           )
         end
@@ -184,9 +181,73 @@ describe Snapshot do
 
         it 'uses the fixed derivedDataPath if given' do
           expect(Dir).not_to receive(:mktmpdir)
-          command = Snapshot::TestCommandGenerator.generate(device_type: "iPhone 6")
+          command = Snapshot::TestCommandGenerator.generate(device_type: "iPhone 6", language: "en", locale: nil)
           expect(command.join('')).to include("-derivedDataPath 'fake/derived/path'")
         end
+      end
+    end
+
+    describe "Valid macOS Configuration" do
+      let(:options) { { project: "./snapshot/example/Example.xcodeproj", scheme: "ExampleMacOS", namespace_log_files: true } }
+
+      it "uses default parameters on macOS" do
+        Snapshot.config = FastlaneCore::Configuration.create(Snapshot::Options.available_options, options.merge(devices: ["Mac"]))
+        expect(Dir).to receive(:mktmpdir).with("snapshot_derived").and_return("/tmp/path/to/snapshot_derived")
+        command = Snapshot::TestCommandGenerator.generate(device_type: "Mac", language: "en", locale: nil)
+        expect(command).to eq(
+          [
+            "set -o pipefail &&",
+            "xcodebuild",
+            "-scheme ExampleMacOS",
+            "-project ./snapshot/example/Example.xcodeproj",
+            "-derivedDataPath '/tmp/path/to/snapshot_derived'",
+            "-destination 'platform=macOS'",
+            "FASTLANE_SNAPSHOT=YES",
+            :build,
+            :test,
+            "| tee #{File.expand_path("#{FastlaneCore::Helper.buildlog_path}/snapshot/ExampleMacOS-ExampleMacOS-Mac-en.log")} | xcpretty "
+          ]
+        )
+      end
+    end
+
+    describe "Unique logs" do
+      let(:options) { { project: "./snapshot/example/Example.xcodeproj", scheme: "ExampleUITests", namespace_log_files: true } }
+
+      it 'uses correct name and language' do
+        Snapshot.config = FastlaneCore::Configuration.create(Snapshot::Options.available_options, options)
+        log_path = Snapshot::TestCommandGenerator.xcodebuild_log_path(device_type: "iPhone 6", language: "pt", locale: nil)
+        expect(log_path).to eq(
+          File.expand_path("#{FastlaneCore::Helper.buildlog_path}/snapshot/Example-ExampleUITests-iPhone 6-pt.log").to_s
+        )
+      end
+
+      it 'uses includes locale if specified' do
+        Snapshot.config = FastlaneCore::Configuration.create(Snapshot::Options.available_options, options)
+        log_path = Snapshot::TestCommandGenerator.xcodebuild_log_path(device_type: "iPhone 6", language: "pt", locale: "pt_BR")
+        expect(log_path).to eq(
+          File.expand_path("#{FastlaneCore::Helper.buildlog_path}/snapshot/Example-ExampleUITests-iPhone 6-pt-pt_BR.log").to_s
+        )
+      end
+
+      it 'can work without parameters' do
+        Snapshot.config = FastlaneCore::Configuration.create(Snapshot::Options.available_options, options)
+        log_path = Snapshot::TestCommandGenerator.xcodebuild_log_path
+        expect(log_path).to eq(
+          File.expand_path("#{FastlaneCore::Helper.buildlog_path}/snapshot/Example-ExampleUITests.log").to_s
+        )
+      end
+    end
+
+    describe "Unique logs disabled" do
+      let(:options) { { project: "./snapshot/example/Example.xcodeproj", scheme: "ExampleUITests" } }
+
+      it 'uses correct file name' do
+        Snapshot.config = FastlaneCore::Configuration.create(Snapshot::Options.available_options, options)
+        log_path = Snapshot::TestCommandGenerator.xcodebuild_log_path(device_type: "iPhone 6", language: "pt", locale: nil)
+        expect(log_path).to eq(
+          File.expand_path("#{FastlaneCore::Helper.buildlog_path}/snapshot/Example-ExampleUITests.log").to_s
+        )
       end
     end
   end

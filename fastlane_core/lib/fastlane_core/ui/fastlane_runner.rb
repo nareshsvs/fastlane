@@ -42,12 +42,13 @@ module Commander
         if FastlaneCore::Helper.test?
           raise e
         else
+          FastlaneCore::CrashReporter.report_crash(exception: e, action: @program[:name])
           abort "#{e}. Use --help for more information"
         end
-      rescue Interrupt => ex
+      rescue Interrupt => e
         # We catch it so that the stack trace is hidden by default when using ctrl + c
         if FastlaneCore::Globals.verbose?
-          raise ex
+          raise e
         else
           puts "\nCancelled... use --verbose to show the stack trace"
         end
@@ -60,21 +61,48 @@ module Commander
         if FastlaneCore::Helper.test?
           raise e
         else
-          abort e.to_s
+          FastlaneCore::CrashReporter.report_crash(exception: e, action: @program[:name])
+          if self.active_command.name == "help" && @default_command == :help # need to access directly via @
+            # This is a special case, for example for pilot
+            # when the user runs `fastlane pilot -u user@google.com`
+            # This would be confusing, as the user probably wanted to use `pilot list`
+            # or some other command. Because `-u` isn't available for the `pilot --help`
+            # command it would show this very confusing error message otherwise
+            abort "Please ensure to use one of the available commands (#{self.commands.keys.join(', ')})".red
+          else
+            # This would print something like
+            #
+            #   invalid option: -u
+            #
+            abort e.to_s
+          end
         end
+      rescue FastlaneCore::Interface::FastlaneCommonException => e # these are exceptions that we dont count as crashes
+        display_user_error!(e, e.to_s)
       rescue FastlaneCore::Interface::FastlaneError => e # user_error!
         collector.did_raise_error(@program[:name])
         show_github_issues(e.message) if e.show_github_issues
+        FastlaneCore::CrashReporter.report_crash(exception: e, action: @program[:name])
         display_user_error!(e, e.message)
+      rescue Errno::ENOENT => e
+        # We're also printing the new-lines, as otherwise the message is not very visible in-between the error and the stacktrace
+        puts ""
+        FastlaneCore::UI.important("Error accessing file, this might be due to fastlane's directory handling")
+        FastlaneCore::UI.important("Check out https://docs.fastlane.tools/advanced/#directory-behavior for more details")
+        puts ""
+        FastlaneCore::CrashReporter.report_crash(exception: e, action: @program[:name])
+        raise e
       rescue Faraday::SSLError => e # SSL issues are very common
         handle_ssl_error!(e)
       rescue Faraday::ConnectionFailed => e
         if e.message.include? 'Connection reset by peer - SSL_connect'
           handle_tls_error!(e)
         else
+          FastlaneCore::CrashReporter.report_crash(exception: e, action: @program[:name])
           handle_unknown_error!(e)
         end
       rescue => e # high chance this is actually FastlaneCore::Interface::FastlaneCrash, but can be anything else
+        FastlaneCore::CrashReporter.report_crash(exception: e, action: @program[:name])
         collector.did_crash(@program[:name])
         handle_unknown_error!(e)
       ensure

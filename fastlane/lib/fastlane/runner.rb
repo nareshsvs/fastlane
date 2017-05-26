@@ -62,7 +62,7 @@ module Fastlane
             error_blocks[current_platform].call(current_lane, ex, parameters) if current_platform && error_blocks[current_platform]
             error_blocks[nil].call(current_lane, ex, parameters) if error_blocks[nil]
           rescue => error_block_exception
-            UI.error("An error occured while executing the `error` block:")
+            UI.error("An error occurred while executing the `error` block:")
             UI.error(error_block_exception.to_s)
             raise ex # raise the original error message
           end
@@ -101,6 +101,17 @@ module Fastlane
       nil
     end
 
+    # Pass a action alias symbol (e.g. :enable_automatic_code_signing)
+    # and this method will return a reference to the action class
+    # if it exists. In case the action with this alias can't be found
+    # this method will return nil.
+    def class_reference_from_action_alias(method_sym)
+      alias_found = find_alias(method_sym.to_s)
+      return nil unless alias_found
+
+      class_reference_from_action_name(alias_found.to_sym)
+    end
+
     # lookup if an alias exists
     def find_alias(action_name)
       Actions.alias_actions.each do |key, v|
@@ -119,14 +130,12 @@ module Fastlane
       # First, check if there is a predefined method in the actions folder
       class_ref = class_reference_from_action_name(method_sym)
       unless class_ref
-        alias_found = find_alias(method_sym.to_s)
-        if alias_found
+        class_ref = class_reference_from_action_alias(method_sym)
+        # notify action that it has been used by alias
+        if class_ref.respond_to?(:alias_used)
           orig_action = method_sym.to_s
-          class_ref = class_reference_from_action_name(alias_found.to_sym)
-          # notify action that it has been used by alias
-          if class_ref.respond_to?(:alias_used)
-            class_ref.alias_used(orig_action, arguments.first)
-          end
+          arguments = [{}] if arguments.empty?
+          class_ref.alias_used(orig_action, arguments.first)
         end
       end
 
@@ -243,12 +252,18 @@ module Fastlane
             class_ref.run(arguments)
           end
         end
+      rescue Interrupt => e
+        raise e # reraise the interruption to avoid logging this as a crash
+      rescue FastlaneCore::Interface::FastlaneCommonException => e # these are exceptions that we dont count as crashes
+        raise e
       rescue FastlaneCore::Interface::FastlaneError => e # user_error!
+        FastlaneCore::CrashReporter.report_crash(exception: e, action: method_sym)
         collector.did_raise_error(method_sym)
         raise e
       rescue Exception => e # rubocop:disable Lint/RescueException
         # high chance this is actually FastlaneCore::Interface::FastlaneCrash, but can be anything else
         # Catches all exceptions, since some plugins might use system exits to get out
+        FastlaneCore::CrashReporter.report_crash(exception: e, action: method_sym)
         collector.did_crash(method_sym)
         raise e
       end
@@ -304,14 +319,23 @@ module Fastlane
     end
 
     def set_before_all(platform, block)
+      unless before_all_blocks[platform].nil?
+        UI.error("You defined multiple `before_all` blocks in your `Fastfile`. The last one being set will be used.")
+      end
       before_all_blocks[platform] = block
     end
 
     def set_after_all(platform, block)
+      unless after_all_blocks[platform].nil?
+        UI.error("You defined multiple `after_all` blocks in your `Fastfile`. The last one being set will be used.")
+      end
       after_all_blocks[platform] = block
     end
 
     def set_error(platform, block)
+      unless error_blocks[platform].nil?
+        UI.error("You defined multiple `error` blocks in your `Fastfile`. The last one being set will be used.")
+      end
       error_blocks[platform] = block
     end
 

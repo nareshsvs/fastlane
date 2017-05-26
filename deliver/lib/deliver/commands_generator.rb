@@ -28,6 +28,7 @@ module Deliver
       return available_options
     end
 
+    # rubocop:disable Metrics/PerceivedComplexity
     def run
       program :name, 'deliver'
       program :version, Fastlane::VERSION
@@ -50,7 +51,10 @@ module Deliver
         c.action do |args, options|
           options = FastlaneCore::Configuration.create(deliverfile_options, options.__hash__)
           loaded = options.load_configuration_file("Deliverfile")
-          loaded = true if options[:description] || options[:ipa] || options[:pkg] # do we have *anything* here?
+
+          # Check if we already have a deliver setup in the current directory
+          loaded = true if options[:description] || options[:ipa] || options[:pkg]
+          loaded = true if File.exist?(File.join(FastlaneCore::FastlaneFolder.path || ".", "metadata"))
           unless loaded
             if UI.confirm("No deliver configuration found in the current directory. Do you want to setup deliver?")
               require 'deliver/setup'
@@ -124,7 +128,7 @@ module Deliver
           options = FastlaneCore::Configuration.create(deliverfile_options(skip_verification: true), options.__hash__)
           options.load_configuration_file("Deliverfile")
           Deliver::Runner.new(options, skip_version: true) # to login...
-          containing = FastlaneCore::Helper.fastlane_enabled? ? './fastlane' : '.'
+          containing = FastlaneCore::Helper.fastlane_enabled? ? FastlaneCore::FastlaneFolder.path : '.'
           path = options[:screenshots_path] || File.join(containing, 'screenshots')
           Deliver::DownloadScreenshots.run(options, path)
         end
@@ -140,7 +144,7 @@ module Deliver
           options = FastlaneCore::Configuration.create(deliverfile_options(skip_verification: true), options.__hash__)
           options.load_configuration_file("Deliverfile")
           Deliver::Runner.new(options) # to login...
-          containing = FastlaneCore::Helper.fastlane_enabled? ? './fastlane' : '.'
+          containing = FastlaneCore::Helper.fastlane_enabled? ? FastlaneCore::FastlaneFolder.path : '.'
           path = options[:metadata_path] || File.join(containing, 'metadata')
           res = ENV["DELIVER_FORCE_OVERWRITE"]
           res ||= UI.confirm("Do you want to overwrite existing metadata on path '#{File.expand_path(path)}'?")
@@ -163,5 +167,6 @@ module Deliver
 
       run!
     end
+    # rubocop:enable Metrics/PerceivedComplexity
   end
 end

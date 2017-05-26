@@ -1,14 +1,36 @@
 module Match
   class GitHelper
-    def self.clone(git_url, shallow_clone, manual_password: nil, skip_docs: false, branch: "master")
+    def self.clone(git_url,
+                   shallow_clone,
+                   manual_password: nil,
+                   skip_docs: false,
+                   branch: "master",
+                   git_full_name: nil,
+                   git_user_email: nil,
+                   clone_branch_directly: false)
+      # Note: if you modify the parameters above, don't forget to also update the method call in
+      # - runner.rb
+      # - nuke.rb
+      # - change_password.rb
+      # - commands_generator.rb
+      #
       return @dir if @dir
 
       @dir = Dir.mktmpdir
 
       command = "git clone '#{git_url}' '#{@dir}'"
-      command << " --depth 1 --no-single-branch" if shallow_clone
+      if shallow_clone
+        command << " --depth 1 --no-single-branch"
+      elsif clone_branch_directly
+        command += " -b #{branch.shellescape} --single-branch"
+      end
 
       UI.message "Cloning remote git repo..."
+
+      if branch && !clone_branch_directly
+        UI.message("If cloning the repo takes too long, you can use the `clone_branch_directly` option in match.")
+      end
+
       begin
         # GIT_TERMINAL_PROMPT will fail the `git clone` command if user credentials are missing
         FastlaneCore::CommandExecutor.execute(command: "GIT_TERMINAL_PROMPT=0 #{command}",
@@ -20,6 +42,8 @@ module Match
         UI.command(command)
         UI.user_error!("Error cloning certificates git repo, please make sure you have access to the repository - see instructions above")
       end
+
+      add_user_config(git_full_name, git_user_email)
 
       UI.user_error!("Error cloning repo, make sure you have access to it '#{git_url}'") unless File.directory?(@dir)
 
@@ -139,6 +163,24 @@ module Match
     def self.copy_readme(directory)
       template = File.read("#{Match::ROOT}/lib/assets/READMETemplate.md")
       File.write(File.join(directory, "README.md"), template)
+    end
+
+    def self.add_user_config(user_name, user_email)
+      # Add git config if needed
+      commands = []
+      commands << "git config user.name \"#{user_name}\"" unless user_name.nil?
+      commands << "git config user.email \"#{user_email}\"" unless user_email.nil?
+
+      return if commands.empty?
+
+      UI.message "Add git user config to local git repo..."
+      Dir.chdir(@dir) do
+        commands.each do |command|
+          FastlaneCore::CommandExecutor.execute(command: command,
+                                                print_all: FastlaneCore::Globals.verbose?,
+                                                print_command: FastlaneCore::Globals.verbose?)
+        end
+      end
     end
   end
 end

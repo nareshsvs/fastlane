@@ -48,13 +48,14 @@ module Fastlane
             require File.join(tool_name, "commands_generator")
 
             # Call the tool's CommandsGenerator class and let it do its thing
-            Object.const_get(tool_name.fastlane_module)::CommandsGenerator.start
+            commands_generator = Object.const_get(tool_name.fastlane_module)::CommandsGenerator
           rescue LoadError
             # This will only happen if the tool we call here, doesn't provide
             # a CommandsGenerator class yet
             # When we launch this feature, this should never be the case
             abort("#{tool_name} can't be called via `fastlane #{tool_name}`, run '#{tool_name}' directly instead".red)
           end
+          commands_generator.start
         elsif tool_name == "fastlane-credentials"
           require 'credentials_manager'
           ARGV.shift
@@ -91,6 +92,7 @@ module Fastlane
           UI.important "to launch fastlane faster, please use"
           UI.message ""
           UI.command "bundle exec fastlane #{ARGV.join(' ')}"
+          UI.message ""
         else
           # fastlane is slow and there is no Gemfile
           # Let's tell the user how to use `gem cleanup` and how to

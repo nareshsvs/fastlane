@@ -224,7 +224,11 @@ module FastlaneCore
         logs_destination_dir = File.expand_path(logs_destination_dir)
         os_version = FastlaneCore::CommandExecutor.execute(command: 'sw_vers -productVersion', print_all: false, print_command: false)
 
-        if Gem::Version.new(os_version) >= Gem::Version.new('10.12.0')
+        host_computer_supports_logarchives = Gem::Version.new(os_version) >= Gem::Version.new('10.12.0')
+        device_supports_logarchives = Gem::Version.new(device.os_version) >= Gem::Version.new('10.0')
+
+        are_logarchives_supported = device_supports_logarchives && host_computer_supports_logarchives
+        if are_logarchives_supported
           copy_logarchive(device, log_identity, logs_destination_dir)
         else
           copy_logfile(device, log_identity, logs_destination_dir)
@@ -246,20 +250,13 @@ module FastlaneCore
       end
 
       def copy_logarchive(device, log_identity, logs_destination_dir)
-        sim_resource_dir = FastlaneCore::CommandExecutor.execute(command: "xcrun simctl getenv #{device.udid} SIMULATOR_SHARED_RESOURCES_DIRECTORY 2>/dev/null", print_all: false, print_command: true)
-        logarchive_src = File.join(sim_resource_dir, "system_logs.logarchive")
-        logarchive_dst = File.join(logs_destination_dir, "system_logs-#{log_identity}.logarchive")
+        require 'shellwords'
 
-        # if logarchive already exists it fails as the .logarchive is a directory, so delete it. to be sure its gone
-        FileUtils.rm_rf(logarchive_src)
+        logarchive_dst = Shellwords.escape(File.join(logs_destination_dir, "system_logs-#{log_identity}.logarchive"))
         FileUtils.rm_rf(logarchive_dst)
-
-        command = "xcrun simctl spawn #{device.udid} log collect 2>/dev/null"
-        FastlaneCore::CommandExecutor.execute(command: command, print_all: false, print_command: true)
-
         FileUtils.mkdir_p(logarchive_dst)
-        FileUtils.cp_r("#{logarchive_src}/.", logarchive_dst)
-        UI.success "Copying file '#{logarchive_src}' to '#{logarchive_dst}'..."
+        command = "xcrun simctl spawn #{device.udid} log collect --output #{logarchive_dst} 2>/dev/null"
+        FastlaneCore::CommandExecutor.execute(command: command, print_all: false, print_command: true)
       end
     end
   end

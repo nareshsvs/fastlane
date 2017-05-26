@@ -46,7 +46,7 @@ module Fastlane
           UI.success('Successfully sent Slack notification')
         else
           UI.verbose(result)
-          UI.user_error!("Error pushing Slack message, maybe the integration has no permission to post on this channel? Try removing the channel parameter in your Fastfile, this is usually caused by a mispelled or changed group/channel name or an expired SLACK_URL")
+          UI.user_error!("Error pushing Slack message, maybe the integration has no permission to post on this channel? Try removing the channel parameter in your Fastfile, this is usually caused by a misspelled or changed group/channel name or an expired SLACK_URL")
         end
       end
 
@@ -91,14 +91,14 @@ module Fastlane
                                        optional: true),
           FastlaneCore::ConfigItem.new(key: :payload,
                                        env_name: "FL_SLACK_PAYLOAD",
-                                       description: "Add additional information to this post. payload must be a hash containg any key with any value",
+                                       description: "Add additional information to this post. payload must be a hash containing any key with any value",
                                        default_value: {},
                                        is_string: false),
           FastlaneCore::ConfigItem.new(key: :default_payloads,
                                        env_name: "FL_SLACK_DEFAULT_PAYLOADS",
                                        description: "Remove some of the default payloads. More information about the available payloads on GitHub",
                                        optional: true,
-                                       is_string: false),
+                                       type: Array),
           FastlaneCore::ConfigItem.new(key: :attachment_properties,
                                        env_name: "FL_SLACK_ATTACHMENT_PROPERTIES",
                                        description: "Merge additional properties in the slack attachment, see https://api.slack.com/docs/attachments",

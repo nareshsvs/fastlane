@@ -9,7 +9,8 @@ module Fastlane
         Spaceship::Tunes.select_team
         UI.message("Login successful")
 
-        app = Spaceship::Application.find(params[:app_identifier])
+        app = Spaceship::Application.find(params[:app_identifier]) || Spaceship::Application.find(params[:app_identifier], mac: true)
+        UI.user_error!("Couldn't find app with identifier #{params[:app_identifier]}") if app.nil?
 
         version_number = params[:version]
         unless version_number
@@ -27,7 +28,7 @@ module Fastlane
 
         changelog = params[:changelog]
         unless changelog
-          path = "./fastlane/changelog.txt"
+          path = default_changelog_path
           UI.message("Looking for changelog in '#{path}'...")
           if File.exist? path
             changelog = File.read(path)
@@ -62,7 +63,11 @@ module Fastlane
         UI.message("Uploading changes to iTunes Connect...")
         v.save!
 
-        UI.success("👼 Successfully pushed the new changelog to #{v.url}")
+        UI.success("👼  Successfully pushed the new changelog to #{v.url}")
+      end
+
+      def self.default_changelog_path
+        File.join(FastlaneCore::FastlaneFolder.path.to_s, 'changelog.txt')
       end
 
       #####################################################
@@ -76,7 +81,7 @@ module Fastlane
       def self.details
         [
           "This is useful if you have only one changelog for all languages.",
-          "You can store the changelog in `./fastlane/changelog.txt` and it will automatically get loaded from there. This integration is useful if you support e.g. 10 languages and want to use the same \"What's new\"-text for all languages."
+          "You can store the changelog in `#{default_changelog_path}` and it will automatically get loaded from there. This integration is useful if you support e.g. 10 languages and want to use the same \"What's new\"-text for all languages."
         ].join("\n")
       end
 
